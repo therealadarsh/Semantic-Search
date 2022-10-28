@@ -1,0 +1,29 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - develop
+      - feature/fine_training
+
+env:
+  HEROKU_API_KEY: ${{secrets.HEROKU_API_KEY}}
+  APP_NAME: "semantic-search-application"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Login to Heroku Container Registry 
+        run: heroku container:login
+      
+      - name: Build and push
+        run: heroku container:push -a $APP_NAME web
+        
+      - name: Publish
+        run: |
+          heroku container:push web -a $APP_NAME
+          heroku container:release web -a $APP_NAME 
+          

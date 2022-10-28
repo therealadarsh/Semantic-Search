@@ -1,0 +1,14 @@
+name: 'Auto Assign PR Challenge Submission Reviewers'
+
+on:
+  pull_request_target:
+    types: [ opened, ready_for_review]
+
+jobs:
+  auto-assign-reviewrs:
+    if: github.repository != 'pablordoricaw/rbs-ml-e2e-challenge'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: kentaro-m/auto-assign-action@v1.2.1
+        with:
+          configuration-path: '.github/config-reviewers.yml'

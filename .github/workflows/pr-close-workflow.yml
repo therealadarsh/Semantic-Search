@@ -1,0 +1,22 @@
+name: Close PRs for Incorrect Submissions
+
+on: 
+  pull_request_target:
+    types: [ opened, reopened ]
+
+jobs:
+  close-prs:
+    if: github.repository == 'pablordoricaw/rbs-ml-e2e-challenge'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: superbrothers/close-pull-request@v3
+        with:
+          comment: |
+            🤖 _The PR was automatically closed._ 🤖
+
+            ❗**Note**❗ @${{ github.actor }} ⬇️⬇️⬇️
+            
+            The challenge submission should be done by submitting a PR to **YOUR repo's main branch**. Not to the challenge repo's main branch.
+            Please submit a PR in your repository. 
+
+            Thank you

@@ -1,0 +1,13 @@
+name: GitHub Actions Demo
+on:
+  push:
+    branches:
+      - main
+jobs:
+  demo-github-action:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Hello World!"
+      - run: echo "This is an example GitHub Action"
+      - run: echo "You can use GitHub Actions to automate any steps of the challenge"
+      
