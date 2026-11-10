@@ -1,36 +1,59 @@
-from sentence_transformers import SentenceTransformer, util
-import datasets
-import faiss
+"""Semantic search over the AG News index.
+
+The model, dataset and index are loaded once when SearchEngine is created,
+not on every request. Loading takes a few seconds; a search takes milliseconds.
+"""
+
 import argparse
-import os
-import time
+from dataclasses import dataclass
+from pathlib import Path
 
-def search(query):
-    embedder_name = 'multi-qa-MiniLM-L6-cos-v1'
-    if os.path.isdir('models/semantic-model'):
-        embedder_name = 'models/semantic-model'
-        
-    embedder = SentenceTransformer(embedder_name)
-    t=time.time()
-    query_vector = embedder.encode([query])
-    dataset = datasets.load_from_disk("data/train[:12000]")
-    dataset.load_faiss_index('embeddings', 'data/training_index.faiss')
-    scores, retrieved_examples = dataset.get_nearest_examples('embeddings', query_vector, k=5)
-    print(scores)
-    output = {}
-    
-    for retrieved_example in retrieved_examples['text']:
-        print(retrieved_example)
-        print("--------------------------------------------------")
-    print('totaltime: {}'.format(time.time()-t))
-    return retrieved_examples['text']
+import settings
 
-# def main():
-#     parser = argparse.ArgumentParser(description = 'Search Query')
-#     parser.add_argument('--query', help='quert name, enter it')
-#     args = parser.parse_args()
-#     print(args.query)
-#     search(args.query)
 
-# if __name__ == "__main__": 
-#     main()
+@dataclass(frozen=True)
+class SearchResult:
+    text: str
+    category: str
+    score: float
+
+
+class SearchEngine:
+    def __init__(
+        self,
+        model_path: str = settings.MODEL_PATH,
+        dataset_path: Path = settings.DATASET_PATH,
+        index_path: Path = settings.INDEX_PATH,
+    ) -> None:
+        # Heavy imports live here so that importing this module (for example in
+        # API unit tests that use a fake engine) does not load PyTorch.
+        import datasets
+        from sentence_transformers import SentenceTransformer
+
+        if not Path(index_path).exists():
+            raise FileNotFoundError(f"No search index at {index_path}. Build it with `make index`.")
+        self._model = SentenceTransformer(model_path)
+        self._dataset = datasets.load_from_disk(str(dataset_path))
+        self._dataset.load_faiss_index("embeddings", str(index_path))
+        self._labels = self._dataset.features["label"].names
+
+    def search(self, query: str, k: int = settings.DEFAULT_TOP_K) -> list[SearchResult]:
+        query_vector = self._model.encode(query, convert_to_numpy=True)
+        scores, examples = self._dataset.get_nearest_examples("embeddings", query_vector, k=k)
+        return [
+            SearchResult(text=text, category=self._labels[label], score=float(score))
+            for text, label, score in zip(examples["text"], examples["label"], scores, strict=True)
+        ]
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Search news articles from the command line.")
+    parser.add_argument("query")
+    parser.add_argument("-k", type=int, default=settings.DEFAULT_TOP_K)
+    args = parser.parse_args()
+    for result in SearchEngine().search(args.query, k=args.k):
+        print(f"[{result.score:.3f}] ({result.category}) {result.text}\n")
+
+
+if __name__ == "__main__":
+    main()

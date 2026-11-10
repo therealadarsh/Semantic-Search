@@ -1,0 +1,77 @@
+# Continuous integration: runs on every pull request and every push to main.
+# Nothing gets merged (or released) unless lint, tests and the Docker smoke
+# test pass. Mark these jobs as "required checks" in branch protection.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  # Lets release.yml run this exact pipeline before publishing an image.
+  workflow_call:
+
+# Least privilege: the default GITHUB_TOKEN can only read the repo.
+permissions:
+  contents: read
+
+# A new push to the same branch cancels the now-outdated run.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: pip install "$(grep -E '^ruff==' requirements-dev.txt)"
+      - run: ruff check --output-format=github .
+      - run: ruff format --check .
+
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements*.txt
+      - name: Install dependencies (CPU-only PyTorch)
+        run: |
+          pip install --index-url https://download.pytorch.org/whl/cpu "$(grep -E '^torch==' requirements.txt)"
+          pip install -r requirements-dev.txt
+      - name: Build search index
+        run: python scripts/embed_data.py
+        env:
+          HF_HUB_OFFLINE: "1"
+      - run: pytest -v
+
+  docker:
+    # Only spend time on the image once the cheap checks pass.
+    needs: [lint, test]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - name: Build image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          load: true # make the image available to `docker run` below
+          tags: semantic-search:ci
+          # Reuse layers from previous runs (stored in the GitHub Actions cache).
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Smoke test the container
+        run: ./tests/smoke_test.sh semantic-search:ci

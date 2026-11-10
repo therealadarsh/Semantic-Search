@@ -1,0 +1,4 @@
+# Extra packages for scripts/fine_training.py only (kept out of the runtime image).
+-r requirements.txt
+sentencepiece==0.2.3
+tqdm==4.70.1

@@ -1,0 +1,6 @@
+# Everything needed to lint and test. Install with: make install
+-r requirements.txt
+pytest==9.2.0
+httpx==0.28.1
+ruff==0.17.4
+pre-commit==4.7.0
