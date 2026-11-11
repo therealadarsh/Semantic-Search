@@ -1,0 +1,27 @@
+# Dependabot opens PRs when dependencies get updates or security fixes.
+# CI runs on those PRs, so you only merge upgrades that pass.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      # Update the ML stack together since these packages depend on each other.
+      ml:
+        patterns: ["torch", "sentence-transformers", "transformers", "datasets", "faiss-cpu", "numpy"]
+      dev:
+        patterns: ["pytest", "httpx", "ruff"]

@@ -1,0 +1,19 @@
+# Keep the build context small and the image free of things it doesn't need.
+.git
+.github
+.venv
+venv
+**/__pycache__
+*.pyc
+.pytest_cache
+.ruff_cache
+tests
+docs
+*.md
+!models/**/README.md
+Makefile
+.pre-commit-config.yaml
+
+# Built inside the image by the `index` stage, never copied in.
+data/*.faiss
+data/generated_queries.tsv
