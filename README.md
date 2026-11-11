@@ -1,5 +1,9 @@
 # Semantic Search
 
+> **Continued in [SSV2](https://github.com/therealadarsh/SSV2)**, a rewrite with a
+> generic ingestion pipeline, an evaluation harness, a current embedding model and a RAG
+> roadmap. This repo stays as the reference for the original project and its CI/CD setup.
+
 [![CI](https://github.com/therealadarsh/Semantic-Search/actions/workflows/ci.yml/badge.svg)](https://github.com/therealadarsh/Semantic-Search/actions/workflows/ci.yml)
 
 **Semantic search** finds results by meaning, not just matching keywords. Given a query, this
